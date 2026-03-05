@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUNAR: SURVIVAL PROTOCOL</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        :root {
+            --bg: #030508;
+            --panel: #0a1118;
+            --primary: #00f0ff;
+            --secondary: #0088ff;
+            --warn: #ffb700;
+            --danger: #ff2a2a;
+            --success: #00ff66;
+            --aura: #ff66ff;
+            --text: #d0e0f0;
+            --border: #1a2a3a;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            height: 100vh;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+            background-image: 
+                linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        .screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(3, 5, 8, 0.98);
+            z-index: 100;
+            transition: opacity 0.5s ease;
+        }
+        .hidden { opacity: 0; pointer-events: none; }
+        #screen-intro {
+            background: radial-gradient(circle, rgba(150, 0, 0, 0.3) 0%, var(--bg) 100%);
+            animation: pulse-red 2s infinite alternate;
+        }
+        @keyframes pulse-red { 0% { background-color: rgba(255,0,0,0.05); } 100% { background-color: rgba(255,0,0,0.15); } }
+        .hud-container {
+            width: 98vw; height: 98vh;
+            display: grid;
+            grid-template-columns: 320px 1fr 320px;
+            grid-template-rows: auto 1fr 220px;
+            gap: 15px;
+            padding: 15px;
+        }
+        .panel {
+            background: rgba(10, 17, 24, 0.85);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 15px;
+            display: flex; flex-direction: column;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 0 10px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .panel::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            opacity: 0.5;
+        }
+        h2, h3 { margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 2px; color: var(--primary); font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+        button {
+            background: rgba(0, 240, 255, 0.05);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 10px 15px;
+            font-family: inherit; font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            display: flex; justify-content: space-between; align-items: center;
+            border-radius: 2px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        button:hover:not(:disabled) {
+            background: rgba(0, 240, 255, 0.2);
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+            transform: translateX(5px);
+        }
+        button:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; background: rgba(0,0,0,0.5); border-color: #222;}
+        button.btn-danger:hover:not(:disabled) { background: rgba(255, 42, 42, 0.2); border-color: var(--danger); box-shadow: 0 0 10px rgba(255,42,42,0.3); }
+        .cost { font-size: 0.75rem; color: var(--warn); }
+        .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.95rem; }
+        .stat-val { font-weight: bold; color: var(--primary); }
+        .stat-val.crit { color: var(--danger); animation: pulse 1s infinite; }
+        .progress-bar { width: 100%; height: 6px; background: #111; border-radius: 3px; margin-top: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--primary); transition: width 0.3s; }
+        .progress-fill.crit { background: var(--danger); }
+        #log-container { flex-grow: 1; overflow-y: auto; font-size: 0.85rem; line-height: 1.4; display: flex; flex-direction: column; }
+        .log-entry { margin-bottom: 5px; opacity: 0; animation: fadeIn 0.3s forwards; border-left: 2px solid transparent; padding-left: 5px; }
+        .log-info { color: var(--text); border-color: var(--secondary); }
+        .log-good { color: var(--success); border-color: var(--success); }
+        .log-warn { color: var(--warn); border-color: var(--warn); }
+        .log-crit { color: var(--danger); border-color: var(--danger); font-weight: bold; }
+        .log-lore { color: #88ccff; border-color: #88ccff; font-style: italic; }
+        .log-aura { color: var(--aura); border-color: var(--aura); font-weight: bold; text-shadow: 0 0 5px rgba(255,102,255,0.5); }
+        .viewscreen {
+            flex-grow: 1; display: flex; justify-content: center; align-items: center;
+            background: #020304; border: 1px solid var(--border);
+            position: relative;
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.8);
+            padding: 0;
+        }
+        #view-overlay { position: absolute; top: 10px; left: 10px; z-index: 10; font-size: 0.8rem; color: var(--warn); text-shadow: 0 0 5px #000; }
+        #view-overlay span { display: block; }
+        .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 900px; margin-bottom: 30px; }
+        .setup-box { border: 1px solid var(--border); padding: 20px; background: rgba(0,0,0,0.5); height: 450px; overflow-y: auto;}
+        .setup-box button.active { background: rgba(0, 240, 255, 0.3); border-color: var(--primary); }
+        .minigame-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 50;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        #hack-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
+        .hack-node {
+            width: 60px; height: 60px; border: 1px solid var(--primary);
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; font-size: 1.2rem; transition: 0.2s; background: rgba(0,240,255,0.05);
+        }
+        .hack-node:hover { background: rgba(0,240,255,0.3); transform: scale(1.1); }
+        .hack-node.solved { background: var(--success); border-color: var(--success); color: black; pointer-events: none; }
+        .hack-node.failed { background: var(--danger); border-color: var(--danger); color: white; pointer-events: none; }
+        @keyframes fadeIn { to { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .shake { animation: shake 0.3s; }
+        .overlay-text { font-size: 2rem; letter-spacing: 5px; margin-bottom: 20px; text-shadow: 0 0 15px currentColor;}
+        .map-tile { cursor: pointer; transition: all 0.2s; }
+        .map-tile:hover { opacity: 0.8; stroke-width: 3; }
+    </style>
+</head>
+<body>
+
+<div id="screen-boot" class="screen">
+    <div id="boot-text" style="width: 800px; white-space: pre-wrap; line-height: 1.5; font-size: 1.2rem; color: var(--success);"></div>
+</div>
+
+<div id="screen-setup" class="screen hidden">
+    <h1 style="font-size: 3rem; color: var(--primary); letter-spacing: 10px; margin-bottom: 5px; text-shadow: 0 0 20px var(--primary);">LUNAR_OS_TITAN</h1>
+    <p style="color: var(--secondary); margin-bottom: 40px;">INITIALIZE PERSONNEL PROFILE</p>
+    <div class="setup-grid">
+        <div class="setup-box" id="job-select">
+            <h3 style="color:var(--text)">OCCUPATION</h3>
+            <button onclick="selectJob('ENGINEER', this)">[ENG] ENGINEER <span class="cost">Build Bonus</span></button>
+            <button onclick="selectJob('SCOUT', this)">[SCT] SCOUT <span class="cost">Travel Cost -1</span></button>
+            <button onclick="selectJob('SOLDIER', this)">[SLD] SOLDIER <span class="cost">Combat DMG +20</span></button>
+            <button onclick="selectJob('MINER', this)">[MNR] MINER <span class="cost">Scrap Yield Bonus</span></button>
+            <button onclick="selectJob('BOTANIST', this)">[BOT] BOTANIST <span class="cost">Garden Yield +5</span></button>
+            <button onclick="selectJob('HACKER', this)">[HCX] HACKER <span class="cost">Bypass Locks</span></button>
+            <button onclick="selectJob('MEDIC', this)">[MED] MEDIC <span class="cost">MedBay Bonus</span></button>
+        </div>
+        <div class="setup-box" id="trait-select">
+            <h3 style="color:var(--text)">GENETIC TRAIT</h3>
+            <button onclick="toggleTrait('STRONG', this)">STRONG <span class="cost">+2 HP, Eats More</span></button>
+            <button onclick="toggleTrait('FRAIL', this)">FRAIL <span class="cost">-2 HP, +1 AP</span></button>
+            <button onclick="toggleTrait('GENIUS', this)">GENIUS <span class="cost">Double Research</span></button>
+            <button onclick="toggleTrait('HOARDER', this)">HOARDER <span class="cost">Start +10 Scrap</span></button>
+            <button onclick="toggleTrait('OPTIMIST', this)">OPTIMIST <span class="cost">Free AP Chance</span></button>
+            <button onclick="toggleTrait('EFFICIENT', this)">EFFICIENT <span class="cost">Lower Vitals Tax</span></button>
+            <button onclick="toggleTrait('PARANOID', this)">PARANOID <span class="cost">Evade Combat</span></button>
+        </div>
+    </div>
+    <button onclick="triggerCinematicIntro()" style="width: 400px; justify-content: center; font-size: 1.2rem; padding: 15px; border-color: var(--primary); color: var(--primary);">[ INITIATE NEURAL LINK ]</button>
+</div>
+
+<div id="screen-intro" class="screen hidden">
+    <h2 class="overlay-text" style="color: var(--danger)">CRITICAL EMERGENCY DETECTED</h2>
+    <div id="intro-log" style="width: 600px; height: 350px; font-size: 1.2rem; color: var(--warn); display: flex; flex-direction: column; gap: 15px;"></div>
+    <button id="intro-btn" class="hidden" onclick="bootSystem()" style="margin-top: 30px; font-size: 1.2rem; border-color: var(--danger); color: var(--danger); width: 400px; justify-content: center;">[ INITIALIZE A.U.R.A. ]</button>
+</div>
+
+<div id="screen-shutdown" class="screen hidden" style="background: #000; z-index: 400;">
+    <div id="shutdown-text" style="font-size: 2rem; color: var(--primary); letter-spacing: 5px; text-align: center; line-height: 2;"></div>
+</div>
+
+<div id="screen-metabolism" class="screen hidden">
+    <h2 class="overlay-text" style="color: var(--warn)">CYCLE START: METABOLISM</h2>
+    <p id="aura-morning-text" style="margin-bottom: 30px; color: var(--aura); font-style: italic;"></p>
+    <div style="display: flex; gap: 20px; width: 600px;">
+        <div onclick="processMetabolism(2, 2)" style="flex:1; display:flex; flex-direction:column; align-items:center; padding: 20px; border: 1px solid var(--border); cursor: pointer; background: rgba(0, 240, 255, 0.05);">
+            <span style="font-size: 1.2rem; color:var(--text);">STANDARD RATIONS</span>
+            <span style="color:var(--warn); margin-top:10px;">Cost: 2 Food | Yield: 2 AP</span>
+        </div>
+        <div onclick="processMetabolism(4, 4)" style="flex:1; display:flex; flex-direction:column; align-items:center; padding: 20px; border: 1px solid var(--border); cursor: pointer; background: rgba(0, 240, 255, 0.05);">
+            <span style="font-size: 1.2rem; color:var(--primary);">FULL MEAL</span>
+            <span style="color:var(--warn); margin-top:10px;">Cost: 4 Food | Yield: 4 AP</span>
+        </div>
+    </div>
+    <div id="metab-warning" style="color: var(--danger); margin-top: 20px; font-weight: bold; height: 20px;"></div>
+    <button onclick="restartGame()" style="margin-top: 50px; border-color: var(--danger); color: var(--danger); width: 300px; justify-content: center;">[ ABORT MISSION (WIPE SAVE) ]</button>
+</div>
+
+<div id="screen-hud" class="hud-container hidden">
+    <div class="panel" style="grid-column: 1 / 4; flex-direction: row; justify-content: space-between; align-items: center; padding: 10px 20px;">
+        <div style="font-weight: bold; color: var(--secondary);">LUNAR_OS <span style="color:var(--text);">v12.0</span> | AURA ACTIVE</div>
+        <div id="hud-day" style="font-size: 1.5rem; color: var(--warn); font-weight: bold; letter-spacing: 2px;"></div>
+        <div id="hud-profile" style="color: var(--primary); font-size: 0.9rem;"></div>
+    </div>
+    <div class="panel" style="overflow-y: auto;">
+        <h3>BIOMETRICS</h3>
+        <div id="hud-vitals"></div>
+        <hr style="border:0; border-top:1px solid var(--border); margin: 15px 0;">
+        <h3>INVENTORY</h3>
+        <div id="hud-inv"></div>
+        <hr style="border:0; border-top:1px solid var(--border); margin: 15px 0;">
+        <h3>SYSTEMS</h3>
+        <div id="hud-sys"></div>
+    </div>
+    <div class="panel viewscreen" id="main-viewscreen">
+        <div id="view-overlay">
+            <span id="loc-name" style="font-size: 1.2rem; color: var(--primary); margin-bottom: 5px;"></span>
+            <span id="loc-weather" style="color: var(--danger); font-weight: bold; margin-bottom: 5px;"></span>
+            <span id="loc-status"></span>
+        </div>
+        <svg id="svg-view" width="100%" height="100%" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice"></svg>
+        <div id="overlay-combat" class="minigame-overlay hidden">
+            <h2 class="overlay-text" style="color: var(--danger)">HOSTILE INTERCEPT</h2>
+            <p id="aura-combat-text" style="color: var(--aura); font-style: italic; margin-bottom: 20px;"></p>
+            <svg id="svg-drone" width="200" height="200" viewBox="0 0 100 100" style="margin-bottom: 20px;">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="var(--danger)" stroke-width="4"/>
+                <circle cx="50" cy="50" r="10" fill="var(--danger)">
+                    <animate attributeName="r" values="8;12;8" dur="1s" repeatCount="indefinite" />
+                </circle>
+            </svg>
+            <div style="font-size: 1.5rem; color: var(--warn); margin-bottom: 20px;"><span id="combat-type"></span> INTEGRITY: <span id="combat-hp"></span></div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; width: 420px; justify-content: center;" id="combat-buttons-container"></div>
+        </div>
+        <div id="overlay-hack" class="minigame-overlay hidden">
+            <h2 class="overlay-text" style="color: var(--primary)">DECRYPTOR PROTOCOL</h2>
+            <p id="aura-hack-text" style="color: var(--aura); font-style: italic;"></p>
+            <p>Attempts remaining: <span id="hack-tries" style="color:var(--warn); font-weight:bold; font-size:1.2rem;"></span></p>
+            <div id="hack-grid"></div>
+            <button onclick="abortHack()" id="btn-abort-hack" style="margin-top: 30px; border-color: var(--danger); color: var(--danger);">[ ABORT HACK ]</button>
+        </div>
+    </div>
+    <div class="panel">
+        <h3>COMMAND_LINE</h3>
+        <div style="text-align: center; margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--border);">
+            <span style="font-size: 0.8rem; color: var(--text);">AP_AVAILABLE</span><br>
+            <span id="hud-ap" style="font-size: 2.5rem; color: var(--success); font-weight: bold; text-shadow: 0 0 10px var(--success);"></span>
+        </div>
+        <div id="action-list" style="display: flex; flex-direction: column; overflow-y: auto; flex-grow:1;"></div>
+    </div>
+    <div class="panel" style="grid-column: 1 / 4;">
+        <h3>SYSTEM_LOG</h3>
+        <div id="log-container"></div>
+    </div>
+</div>
+
+<script>
+    let state = {
+        day: 1, hp: 10, maxHp: 10, oxy: 20, wat: 20, foo: 20,
+        bat: 0, scr: 0, ele: 0, ap: 0, res: 0,
+        job: '', traits: [], loc: 'Base', weather: 'CLEAR',
+        px: 2, py: 2, 
+        sys: { solar: 0, condenser: 0, garden: 0, comms: 0, medbay: 0, turret: 0 },
+        gardenProgress: 0, podDismantled: false,
+        combat: { active: false, enemyHp: 0, type: '' },
+        hack: { active: false, targetKeys: [], found: 0, tries: 3 }
+    };
+
+    const LOCATIONS = {
+        'Base': { name: 'HABITAT ALPHA', color: '#00f0ff' },
+        'Sat': { name: 'CRASHED SATELLITE', color: '#ffb700' },
+        'Crater': { name: 'FROZEN CRATER', color: '#00ccff' },
+        'Pod': { name: 'SUPPLY DROP POD', color: '#00ff66' }
+    };
+
+    const GRID_LAYOUT = {
+        '2,2': { id: 'hub', name: 'MAIN HUB', col: '#00f0ff' },
+        '2,1': { id: 'solar', name: 'SOLAR ARRAY', col: '#ffb700', req: 'solar' },
+        '1,2': { id: 'condenser', name: 'CONDENSER', col: '#0088ff', req: 'condenser' },
+        '3,2': { id: 'garden', name: 'HYDRO-GARDEN', col: '#00ff66', req: 'garden' },
+        '2,3': { id: 'medbay', name: 'MEDBAY', col: '#ff2a2a', req: 'medbay' },
+        '1,1': { id: 'comms', name: 'COMMS ARRAY', col: '#ff66ff', req: 'comms' },
+        '3,1': { id: 'turret', name: 'DEFENSE TURRET', col: '#ff2a2a', req: 'turret' }
+    };
+
+    const LORE_DATALOGS = [
+        "LOG 042: The seismic readings weren't anomalies. Something is active beneath the crust.",
+        "LOG 089: Rizzo took the rover. Said he heard a distress beacon from Sector 4. He never came back.",
+        "LOG 112: The automated defense drones severed our comm link to Earth. They are isolating us.",
+        "LOG 015: Command says the extraction ship is 90 days out. I don't think we have enough water.",
+        "LOG 077: I heard tapping on the outside of the airlock. We are supposed to be the only ones out here.",
+        "LOG 099: The Atmospheric Condenser keeps pulling in trace amounts of... something biological.",
+        "LOG 002: Habitat Alpha established. A new frontier for humanity. We are making history."
+    ];
+
+    let inputLocked = false;
+
+    const sfx = {
+        ctx: null, initialized: false, droneOsc: null,
+        init() {
+            if(this.initialized) return;
+            window.AudioContext = window.AudioContext || window.webkitAudioContext;
+            this.ctx = new AudioContext();
+            this.initialized = true;
+            this.startDrone();
+        },
+        play(type) {
+            if(!this.initialized) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain); gain.connect(this.ctx.destination);
+            const now = this.ctx.currentTime;
+            
+            if (type === 'click') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(800, now); osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now); osc.stop(now + 0.05);
+            } else if (type === 'error') {
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.linearRampToValueAtTime(100, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'success') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(400, now); osc.frequency.setValueAtTime(600, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now); osc.stop(now + 0.4);
+            } else if (type === 'scan') {
+                osc.type = 'triangle'; osc.frequency.setValueAtTime(200, now); osc.frequency.linearRampToValueAtTime(800, now + 0.8);
+                gain.gain.setValueAtTime(0.05, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.8);
+                osc.start(now); osc.stop(now + 0.8);
+            } else if (type === 'combat') {
+                osc.type = 'square'; osc.frequency.setValueAtTime(100, now); osc.frequency.setValueAtTime(50, now+0.1);
+                gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
+            } else if (type === 'aura') {
+                osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.linearRampToValueAtTime(900, now + 0.2);
+                gain.gain.setValueAtTime(0.05, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now); osc.stop(now + 0.2);
+            }
+        },
+        startDrone() {
+            this.droneOsc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            this.droneOsc.type = 'sine';
+            this.droneOsc.frequency.value = 55;
+            gain.gain.value = 0.05;
+            this.droneOsc.connect(gain); gain.connect(this.ctx.destination);
+            this.droneOsc.start();
+        },
+        setDroneFreq(f) { if(this.droneOsc) this.droneOsc.frequency.linearRampToValueAtTime(f, this.ctx.currentTime + 1); }
+    };
+
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+    function setScreen(id) {
+        ['screen-setup', 'screen-intro', 'screen-shutdown', 'screen-metabolism', 'screen-hud'].forEach(s => {
+            const el = document.getElementById(s);
+            if(el) { el.classList.add('hidden'); }
+        });
+        const target = document.getElementById(id);
+        if(target) { target.classList.remove('hidden'); }
+    }
+
+    async function logMsg(text, color = 'var(--text)', isAura = false) {
+        const log = document.getElementById('log-container');
+        const entry = document.createElement('div');
+        entry.style.marginBottom = '5px';
+        entry.style.paddingLeft = '5px';
+        entry.style.borderLeft = `2px solid ${color}`;
+        entry.style.color = color;
+        if(isAura) {
+            entry.style.fontWeight = 'bold';
+            entry.style.textShadow = '0 0 5px rgba(255,102,255,0.5)';
+        }
+        log.appendChild(entry);
+        
+        let prefix = isAura ? '[AURA]: ' : '> ';
+        let currentText = prefix;
+        entry.textContent = currentText;
+        
+        if (isAura) sfx.play('aura');
+
+        for (let i = 0; i < text.length; i++) {
+            currentText += text[i];
+            entry.textContent = currentText;
+            log.scrollTop = log.scrollHeight;
+            if (i % 3 === 0 && !isAura) sfx.play('click'); 
+            await sleep(10);
+        }
+    }
+
+    async function runBootSequence() {
+        sfx.init(); sfx.play('scan');
+        const bootText = document.getElementById('boot-text');
+        const lines = [
+            "LUNAR_OS_TITAN KERNEL BOOT...",
+            "INITIALIZING MEMORY BANKS [OK]",
+            "CHECKING ENVIRONMENTAL SENSORS [OK]",
+            "MOUNTING FILE SYSTEM [OK]",
+            "LOADING UI MODULES..."
+        ];
+        for(let line of lines) {
+            bootText.innerHTML += line + "<br>";
+            sfx.play('click');
+            await sleep(400);
+        }
+        await sleep(500);
+        document.getElementById('screen-boot').classList.add('hidden');
+        setTimeout(() => {
+            document.getElementById('screen-boot').style.display = 'none';
+            setScreen('screen-setup');
+        }, 1000);
+    }
+
+    window.onload = () => {
+        const saved = localStorage.getItem('lunarTitanV12');
+        if(saved) {
+            document.getElementById('screen-boot').style.display = 'none';
+            state = JSON.parse(saved);
+            sfx.init();
+            if(state.ap > 0) {
+                setScreen('screen-hud');
+                updateUI(); drawMapSVG();
+                logMsg("SESSION RESTORED.", "var(--primary)");
+                logMsg("Welcome back, Commander. Systems remained stable.", "var(--aura)", true);
+            } else {
+                generateAuraMorningGreeting();
+                setScreen('screen-metabolism');
+            }
+        } else {
+            runBootSequence();
+        }
+    };
+
+    function selectJob(j, btn) {
+        sfx.init(); sfx.play('click');
+        state.job = j;
+        document.querySelectorAll('#job-select button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+    }
+
+    function toggleTrait(t, btn) {
+        sfx.init(); sfx.play('click');
+        if(state.traits.includes(t)) state.traits = state.traits.filter(x => x !== t);
+        else state.traits.push(t);
+        btn.classList.toggle('active');
+    }
+
+    async function triggerCinematicIntro() {
+        if(!state.job) { sfx.init(); sfx.play('error'); return alert("OCCUPATION REQUIRED."); }
+        sfx.init(); sfx.play('success');
+        setScreen('screen-intro');
+        sfx.setDroneFreq(120);
+
+        const introBox = document.getElementById('intro-log');
+        const lines = [
+            "WARNING: CATASTROPHIC EVENT DETECTED.",
+            "ATMOSPHERE VENTING...",
+            "CREW BIOMETRICS UPDATING...",
+            "CMDR. VANCE: FLATLINE.",
+            "ENG. RIZZO: FLATLINE.",
+            "DR. CHEN: FLATLINE.",
+            "YOU ARE THE SOLE SURVIVOR. EXTRACTION T-MINUS 90 DAYS.",
+            "BOOTING A.U.R.A. COMPANION AI..."
+        ];
+
+        for(let line of lines) {
+            let p = document.createElement('div');
+            introBox.appendChild(p);
+            sfx.play('error');
+            let cur = "";
+            for(let i=0; i<line.length; i++) {
+                cur += line[i];
+                p.textContent = cur;
+                await sleep(15);
+            }
+            await sleep(400);
+        }
+        sfx.setDroneFreq(55);
+        document.getElementById('intro-btn').classList.remove('hidden');
+    }
+
+    async function bootSystem() {
+        sfx.play('click');
+        if(state.job === 'MINER') state.scr += 10;
+        if(state.traits.includes('STRONG')) state.maxHp = 12;
+        if(state.traits.includes('FRAIL')) state.maxHp = 8;
+        if(state.traits.includes('HOARDER')) { state.scr += 10; state.ele += 5; }
+        state.hp = state.maxHp;
+        generateAuraMorningGreeting();
+        setScreen('screen-metabolism');
+    }
+
+    function generateAuraMorningGreeting() {
+        let text = "Good morning, Commander! I've prepared the synthesizer for your breakfast.";
+        if (state.hp < 5) text = "Good morning... Please take it easy today. Your vitals are concerning me.";
+        else if (state.foo < 6) text = "Good morning! My records show our nutrient paste is running low. Let's prioritize that.";
+        else if (state.scr > 20) text = "Good morning! You've been quite industrious. Our scrap reserves are looking excellent!";
+        else if (state.oxy < 8) text = "Commander, please review your oxygen usage today. I'm worried about the life support reserves.";
+        document.getElementById('aura-morning-text').innerText = `"${text}"`;
+    }
+
+    function rollWeather() {
+        let r = Math.random();
+        if(r < 0.5) state.weather = 'CLEAR';
+        else if(r < 0.7) state.weather = 'RADIATION';
+        else if(r < 0.9) state.weather = 'SOLAR_FLARE';
+        else state.weather = 'METEOR_STORM';
+    }
+
+    function processMetabolism(cost, yieldAmount) {
+        if(state.foo < cost) {
+            sfx.play('error');
+            document.getElementById('metab-warning').innerText = "INSUFFICIENT NUTRIENTS FOR SELECTED CYCLE.";
+            return;
+        }
+        sfx.play('success');
+        
+        if(state.traits.includes('FRAIL')) yieldAmount += 1;
+        state.foo -= cost;
+        state.ap = yieldAmount;
+        
+        let tax = 1;
+        if(state.traits.includes('EFFICIENT') && state.day % 2 === 0) tax = 0;
+        state.oxy -= tax; state.wat -= tax;
+        
+        rollWeather();
+        
+        if(state.sys.solar > 0 && state.weather !== 'SOLAR_FLARE') state.bat += state.sys.solar;
+        if(state.sys.condenser > 0 && state.bat > 0) { state.bat--; state.wat += 2; }
+        if(state.sys.garden > 0) {
+            state.gardenProgress++;
+            if(state.gardenProgress >= 3) {
+                let y = state.job === 'BOTANIST' ? 15 : 10;
+                state.foo += y;
+                state.gardenProgress = 0;
+                state.sys.garden = 0;
+            }
+        }
+        
+        if(state.weather === 'METEOR_STORM') {
+            state.scr = Math.max(0, state.scr - Math.floor(Math.random()*5));
+            if(state.sys.solar > 0 && Math.random() > 0.5) state.sys.solar--;
+        }
+
+        if(state.traits.includes('OPTIMIST') && Math.random() < 0.2) state.ap += 1;
+
+        setScreen('screen-hud');
+        initDay();
+    }
+
+    function restartGame() {
+        if(confirm("WARNING: Are you sure you want to abort the mission? All progress will be lost and the save file will be wiped.")) {
+            localStorage.removeItem('lunarTitanV12');
+            location.reload();
+        }
+    }
+
+    async function initDay() {
+        saveGame();
+        updateUI();
+        drawMapSVG();
+        await logMsg(`--- CYCLE ${String(state.day).padStart(2,'0')} INITIALIZED ---`, 'var(--primary)');
+        
+        let auraGreet = "All systems green. I am ready to assist you today, Commander.";
+        if (state.weather === 'RADIATION') auraGreet = "Warning: Radiation spikes detected. Avoid external expeditions.";
+        if (state.weather === 'SOLAR_FLARE') auraGreet = "Solar flare active. Our power generation is completely jammed.";
+        if (state.weather === 'METEOR_STORM') auraGreet = "Brace yourself! Meteor storm is battering the hull!";
+        if (state.hp < 5) auraGreet = "Please be careful today, your physical integrity is compromised.";
+        await logMsg(auraGreet, 'var(--aura)', true);
+
+        if(state.oxy <= 4 || state.wat <= 4) await logMsg("WARNING: Vitals Critical.", 'var(--warn)');
+        checkFailure();
+    }
+
+    async function endCycle() {
+        if(inputLocked) return;
+        lockUI(true);
+        sfx.play('click');
+        setScreen('screen-shutdown');
+        document.getElementById('shutdown-text').innerHTML = "SAVING CYCLE DATA...<br>ENTERING LOW POWER MODE...";
+        await sleep(2000);
+        state.day++; state.ap = 0;
+        
+        if(state.day > 90) {
+            alert("VICTORY! EXTRACTION TEAM SECURED. YOU SURVIVED.");
+            localStorage.removeItem('lunarTitanV12'); location.reload(); return;
+        }
+
+        generateAuraMorningGreeting();
+        setScreen('screen-metabolism');
+        document.getElementById('metab-warning').innerText = "";
+        lockUI(false);
+    }
+
+    function checkFailure() {
+        let msg = "";
+        if(state.hp <= 0) msg = "BIOMETRIC FAILURE: ZERO INTEGRITY.";
+        else if(state.oxy <= 0) msg = "BIOMETRIC FAILURE: ASPHYXIATION.";
+        else if(state.wat <= 0) msg = "BIOMETRIC FAILURE: DEHYDRATION.";
+        
+        if(msg) {
+            alert(`GAME OVER\n${msg}`);
+            localStorage.removeItem('lunarTitanV12'); location.reload();
+        }
+    }
+
+    function lockUI(locked) {
+        inputLocked = locked;
+        renderActions();
+    }
+
+    function updateUI() {
+        document.getElementById('hud-day').innerText = `CYCLE: ${String(state.day).padStart(2,'0')} / 90`;
+        document.getElementById('hud-profile').innerText = `ROLE: ${state.job} | [${state.traits.join(',')}]`;
+        document.getElementById('hud-ap').innerText = state.ap;
+        
+        let wCol = state.weather === 'CLEAR' ? 'var(--success)' : 'var(--danger)';
+        document.getElementById('loc-weather').innerText = `WEATHER: ${state.weather}`;
+        document.getElementById('loc-weather').style.color = wCol;
+
+        const p_hp = (state.hp/state.maxHp)*100;
+        const p_ox = (state.oxy/20)*100;
+        const p_wa = (state.wat/20)*100;
+        const p_fo = (state.foo/20)*100;
+
+        document.getElementById('hud-vitals').innerHTML = `
+            <div class="stat-row"><span>INTEGRITY</span> <span class="stat-val ${state.hp<4?'crit':''}">${state.hp}/${state.maxHp}</span></div>
+            <div class="progress-bar"><div class="progress-fill ${state.hp<4?'crit':''}" style="width:${p_hp}%"></div></div>
+            <div class="stat-row" style="margin-top:10px"><span>O2 SUPPLY</span> <span class="stat-val ${state.oxy<4?'crit':''}">${state.oxy}</span></div>
+            <div class="progress-bar"><div class="progress-fill ${state.oxy<4?'crit':''}" style="width:${p_ox}%"></div></div>
+            <div class="stat-row" style="margin-top:10px"><span>H2O RESERVE</span> <span class="stat-val ${state.wat<4?'crit':''}">${state.wat}</span></div>
+            <div class="progress-bar"><div class="progress-fill ${state.wat<4?'crit':''}" style="width:${p_wa}%"></div></div>
+            <div class="stat-row" style="margin-top:10px"><span>NUTRIENTS</span> <span class="stat-val ${state.foo<4?'crit':''}">${state.foo}</span></div>
+            <div class="progress-bar"><div class="progress-fill ${state.foo<4?'crit':''}" style="width:${p_fo}%"></div></div>
+        `;
+
+        document.getElementById('hud-inv').innerHTML = `
+            <div class="stat-row"><span>⚙️ SCRAP_MTL</span> <span class="stat-val">${state.scr}</span></div>
+            <div class="stat-row"><span>💻 ELECTRONICS</span> <span class="stat-val">${state.ele}</span></div>
+            <div class="stat-row"><span>⚡ BATT_CELLS</span> <span class="stat-val">${state.bat}</span></div>
+            <div class="stat-row"><span>🧬 RESEARCH</span> <span class="stat-val">${state.res}</span></div>
+        `;
+        
+        let sysHtml = `<div class="stat-row"><span>☀️ SOLAR ARRAY</span> <span class="stat-val">LVL ${state.sys.solar}</span></div>`;
+        if(state.sys.condenser > 0) sysHtml += `<div class="stat-row"><span>💧 CONDENSER</span> <span class="stat-val">ON</span></div>`;
+        if(state.sys.garden > 0) sysHtml += `<div class="stat-row"><span>🌱 GARDEN</span> <span class="stat-val">${state.gardenProgress}/3</span></div>`;
+        if(state.sys.comms > 0) sysHtml += `<div class="stat-row"><span>📡 COMMS</span> <span class="stat-val">ON</span></div>`;
+        if(state.sys.medbay > 0) sysHtml += `<div class="stat-row"><span>⚕️ MEDBAY</span> <span class="stat-val">ON</span></div>`;
+        if(state.sys.turret > 0) sysHtml += `<div class="stat-row"><span>🔫 TURRET</span> <span class="stat-val">ON</span></div>`;
+        document.getElementById('hud-sys').innerHTML = sysHtml;
+
+        renderActions();
+    }
+
+    function renderActions() {
+        const list = document.getElementById('action-list');
+        list.innerHTML = '';
+        let dis = inputLocked ? 'disabled' : '';
+
+        if(state.loc === 'Base') {
+            let posKey = `${state.px},${state.py}`;
+            let cell = GRID_LAYOUT[posKey];
+            
+            list.innerHTML += `<div style="text-align:center; color:var(--primary); margin-bottom:10px;">STANDING IN: ${cell ? cell.name : 'CORRIDOR'}</div>`;
+
+            if(posKey === '2,2') {
+                list.innerHTML += `<button onclick="actionScavenge()" ${dis}>[ BASE PERIMETER SCAVENGE ] <span class="cost">1 AP</span></button>`;
+                let tCost = state.job === 'SCOUT' ? 1 : 2;
+                list.innerHTML += `<button onclick="actionTravelMenu()" ${dis}>[ EXPEDITION MENU ] <span class="cost">${tCost} AP</span></button>`;
+                list.innerHTML += `<button onclick="actionResearch()" ${(state.ap < 2 || inputLocked) ? 'disabled':''}>[ RUN RESEARCH ] <span class="cost">2 AP</span></button>`;
+                
+                list.innerHTML += `<div style="text-align:center; color:#555; font-size:0.75rem; margin:10px 0;">--- BUILD SYS (ADJACENT) ---</div>`;
+                let eng = state.job === 'ENGINEER';
+                
+                let rCost = eng ? 2 : 4;
+                list.innerHTML += `<button onclick="actionRepair('solar')" ${(state.ele < rCost || state.ap < 1 || inputLocked) ? 'disabled':''}>BUILD SOLAR <span class="cost">1 AP / ${rCost} ELEC</span></button>`;
+                
+                if(state.sys.condenser === 0) {
+                    let cScr = eng ? 2 : 4; let cEle = eng ? 1 : 2;
+                    list.innerHTML += `<button onclick="actionRepair('condenser')" ${(state.scr < cScr || state.ele < cEle || state.ap < 1 || inputLocked) ? 'disabled':''}>BUILD CONDENSER <span class="cost">1 AP / ${cScr}S ${cEle}E</span></button>`;
+                }
+                if(state.sys.comms === 0) {
+                    let cmEle = eng ? 3 : 5;
+                    list.innerHTML += `<button onclick="actionRepair('comms')" ${(state.ele < cmEle || state.ap < 1 || inputLocked) ? 'disabled':''}>BUILD COMMS <span class="cost">1 AP / ${cmEle} ELEC</span></button>`;
+                }
+                if(state.sys.medbay === 0) {
+                    let mScr = eng ? 3 : 5; let mEle = eng ? 2 : 3;
+                    list.innerHTML += `<button onclick="actionRepair('medbay')" ${(state.scr < mScr || state.ele < mEle || state.ap < 1 || inputLocked) ? 'disabled':''}>BUILD MEDBAY <span class="cost">1 AP / ${mScr}S ${mEle}E</span></button>`;
+                }
+                if(state.sys.garden === 0) {
+                    list.innerHTML += `<button onclick="actionRepair('garden')" ${(state.scr < 2 || state.ele < 1 || state.ap < 1 || inputLocked) ? 'disabled':''}>BUILD GARDEN <span class="cost">1 AP / 2S 1E</span></button>`;
+                }
+                if(state.sys.turret === 0) {
+                    let tScr = eng ? 4 : 6; let tEle = eng ? 3 : 4;
+                    list.innerHTML += `<button onclick="actionRepair('turret')" ${(state.scr < tScr || state.ele < tEle || state.ap < 1 || inputLocked) ? 'disabled':''}>BUILD TURRET <span class="cost">1 AP / ${tScr}S ${tEle}E</span></button>`;
+                }
+            } else if (posKey === '2,1' && state.sys.solar > 0) {
+                let rCost = state.job === 'ENGINEER' ? 2 : 4;
+                list.innerHTML += `<button onclick="actionRepair('solar')" ${(state.ele < rCost || state.ap < 1 || inputLocked) ? 'disabled':''}>UPGRADE SOLAR <span class="cost">1 AP / ${rCost} ELEC</span></button>`;
+            } else if (posKey === '2,3' && state.sys.medbay > 0) {
+                let mbCost = state.job === 'MEDIC' ? 0 : 1;
+                list.innerHTML += `<button onclick="actionHeal()" ${(state.bat < 1 || state.wat < 1 || state.ap < mbCost || inputLocked || state.hp >= state.maxHp) ? 'disabled':''}>[ USE MEDBAY ] <span class="cost">${mbCost} AP / 1P 1W</span></button>`;
+            } else if (posKey === '3,2') {
+                if(state.sys.garden === 0) {
+                    list.innerHTML += `<button onclick="actionPlant()" ${(state.wat < 2 || state.ap < 1 || inputLocked) ? 'disabled':''}>[ PLANT SEEDS ] <span class="cost">1 AP / 2 WAT</span></button>`;
+                } else {
+                    list.innerHTML += `<div style="text-align:center; color:#555;">GARDEN GROWING...</div>`;
+                }
+            } else {
+                list.innerHTML += `<div style="text-align:center; color:#555;">SYSTEM INACTIVE OR NO ACTIONS HERE.</div>`;
+            }
+        } else {
+            list.innerHTML += `<button onclick="actionScavenge()" ${dis}>[ HIGH-YIELD SCAVENGE ] <span class="cost">1 AP</span></button>`;
+            if (state.loc === 'Sat' && state.sys.comms > 0) list.innerHTML += `<button onclick="actionDeepHack()" ${(state.ap < 2 || inputLocked) ? 'disabled':''}>[ DEEP HACK ] <span class="cost">2 AP</span></button>`;
+            if (state.loc === 'Crater') list.innerHTML += `<button onclick="actionDrill()" ${(state.bat < 1 || state.ap < 1 || inputLocked) ? 'disabled':''}>[ THERMAL DRILL ] <span class="cost">1 AP / 1 PWR</span></button>`;
+            if (state.loc === 'Pod' && !state.podDismantled) list.innerHTML += `<button onclick="actionDismantle()" ${(state.ap < 2 || inputLocked) ? 'disabled':''}>[ DISMANTLE POD ] <span class="cost">2 AP</span></button>`;
+            
+            let tCost = state.job === 'SCOUT' ? 1 : 2;
+            list.innerHTML += `<button onclick="actionTravel('Base')" style="border-color:var(--warn)" ${dis}>[ RETURN TO BASE ] <span class="cost">${tCost} AP</span></button>`;
+        }
+
+        list.innerHTML += `<div style="margin-top:auto; display:flex; flex-direction:column; gap:5px;">
+            <button onclick="endCycle()" style="background:rgba(255,183,0,0.1); border-color:var(--warn); color:var(--warn); width:100%;" ${dis}>[ TERMINATE CYCLE ]</button>
+            <button onclick="restartGame()" style="background:rgba(255,42,42,0.1); border-color:var(--danger); color:var(--danger); width:100%;" ${dis}>[ SYSTEM REBOOT (ABORT) ]</button>
+        </div>`;
+    }
+
+    function movePlayer(x, y) {
+        if(inputLocked || state.loc !== 'Base') return;
+        let dx = Math.abs(state.px - x);
+        let dy = Math.abs(state.py - y);
+        if((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) {
+            state.px = x; state.py = y;
+            sfx.play('click');
+            updateUI(); drawMapSVG();
+        }
+    }
+
+    async function actionScavenge() {
+        if(state.ap < 1 || inputLocked) return;
+        lockUI(true); state.ap--; updateUI();
+        sfx.play('scan');
+        await logMsg("Scanning vicinity...", "var(--text)");
+        await sleep(800);
+
+        if(state.weather === 'RADIATION' && state.loc !== 'Base') {
+            state.hp -= 1;
+            sfx.play('error');
+            await logMsg("RADIATION SPIKE! Took 1 DMG.", "var(--danger)");
+            if(state.hp <= 0) { checkFailure(); return; }
+        }
+
+        if(state.loc !== 'Base' && Math.random() > 0.8) {
+            await logMsg("ANOMALY DETECTED. ENCRYPTED CACHE FOUND.", "var(--warn)");
+            await sleep(500);
+            initHack();
+            return; 
+        }
+
+        if (Math.random() < 0.25) {
+            let lore = LORE_DATALOGS[Math.floor(Math.random() * LORE_DATALOGS.length)];
+            sfx.play('success');
+            await logMsg(`[DATALOG] ${lore}`, "var(--secondary)");
+            await logMsg("Archived.", "var(--aura)", true);
+            await sleep(1500);
+        }
+
+        let baseYield = Math.floor(Math.random() * 2); 
+        if(state.job === 'MINER') baseYield += 1;
+        if(state.res > 5) baseYield += 1;
+
+        if(baseYield === 0 && state.loc === 'Base') {
+            await logMsg("Found nothing but lunar dust.", "var(--text)");
+            await logMsg("Don't worry, we'll find more next time!", "var(--aura)", true);
+        } else {
+            if(state.loc === 'Sat') {
+                if(Math.random() > 0.5) state.ele += 1;
+                state.scr += baseYield;
+                await logMsg(`Secured: +${baseYield} SCRAP.`, "var(--success)");
+            } else if (state.loc === 'Crater') {
+                state.wat += 1; state.scr += baseYield;
+                await logMsg(`Secured: +${baseYield} SCRAP, +1 H2O.`, "var(--success)");
+            } else if (state.loc === 'Pod') {
+                state.foo += 2; state.scr += baseYield;
+                await logMsg(`Secured: +${baseYield} SCRAP, +2 FOO.`, "var(--success)");
+            } else {
+                state.scr += baseYield;
+                await logMsg(`Secured: +${baseYield} SCRAP.`, "var(--success)");
+            }
+            sfx.play('success');
+        }
+        updateUI(); lockUI(false);
+    }
+
+    async function actionDrill() {
+        if(state.ap < 1 || state.bat < 1 || inputLocked) return;
+        lockUI(true); state.ap--; state.bat--; updateUI();
+        sfx.play('scan');
+        await logMsg("Deploying thermal drill...", "var(--text)");
+        await sleep(1000);
+        state.wat += 6;
+        sfx.play('success');
+        await logMsg("Extracted massive ice chunk. +6 H2O.", "var(--success)");
+        updateUI(); lockUI(false);
+    }
+
+    async function actionDismantle() {
+        if(state.ap < 2 || inputLocked) return;
+        lockUI(true); state.ap -= 2; updateUI();
+        sfx.play('error');
+        await logMsg("Tearing apart drop pod hull...", "var(--text)");
+        await sleep(1000);
+        state.scr += 10;
+        state.ele += 2;
+        state.podDismantled = true;
+        sfx.play('success');
+        await logMsg("Pod dismantled. +10 SCRAP, +2 ELEC.", "var(--success)");
+        updateUI(); lockUI(false);
+    }
+
+    async function actionDeepHack() {
+        if(state.ap < 2 || inputLocked) return;
+        lockUI(true); state.ap -= 2; updateUI();
+        sfx.play('scan');
+        await logMsg("Using Comms Array to brute force local network...", "var(--text)");
+        await sleep(1000);
+        if(state.job === 'HACKER' || Math.random() > 0.3) {
+            state.ele += 4;
+            sfx.play('success');
+            await logMsg("Hack successful. +4 ELEC.", "var(--success)");
+        } else {
+            sfx.play('error');
+            await logMsg("Firewall retaliated. Hack failed.", "var(--danger)");
+        }
+        updateUI(); lockUI(false);
+    }
+
+    async function actionHeal() {
+        let mbCost = state.job === 'MEDIC' ? 0 : 1;
+        if(state.ap < mbCost || state.bat < 1 || state.wat < 1 || inputLocked) return;
+        lockUI(true); state.ap -= mbCost; state.bat--; state.wat--; updateUI();
+        sfx.play('success');
+        await logMsg("Applying med-gel and bio-stimulants...", "var(--text)");
+        await sleep(800);
+        state.hp = Math.min(state.maxHp, state.hp + 4);
+        await logMsg("Integrity restored.", "var(--success)");
+        updateUI(); lockUI(false);
+    }
+
+    async function actionPlant() {
+        if(state.ap < 1 || state.wat < 2 || inputLocked) return;
+        lockUI(true); state.ap--; state.wat -= 2; updateUI();
+        sfx.play('click');
+        await logMsg("Seeding hydroponics...", "var(--text)");
+        await sleep(800);
+        state.sys.garden = 1; state.gardenProgress = 0;
+        await logMsg("Garden planted. Harvest in 3 days.", "var(--success)");
+        updateUI(); lockUI(false);
+    }
+
+    async function actionResearch() {
+        if(state.ap < 2 || inputLocked) return;
+        lockUI(true); state.ap -= 2; updateUI();
+        sfx.play('scan');
+        await logMsg("Processing environmental data...", "var(--text)");
+        await logMsg("Running parallel analysis routines.", "var(--aura)", true);
+        await sleep(1200);
+        let gain = (state.traits.includes('GENIUS')) ? 2 : 1;
+        state.res += gain;
+        sfx.play('success');
+        await logMsg(`Research cataloged. Efficiency +${gain}.`, "var(--success)");
+        updateUI(); lockUI(false);
+    }
+
+    async function actionRepair(sys) {
+        if(inputLocked) return;
+        let eng = state.job === 'ENGINEER';
+        let costScr = 0, costEle = 0;
+        
+        if(sys === 'solar') costEle = eng ? 2 : 4;
+        if(sys === 'condenser') { costScr = eng ? 2 : 4; costEle = eng ? 1 : 2; }
+        if(sys === 'comms') { costEle = eng ? 3 : 5; }
+        if(sys === 'medbay') { costScr = eng ? 3 : 5; costEle = eng ? 2 : 3; }
+        if(sys === 'garden') { costScr = 2; costEle = 1; }
+        if(sys === 'turret') { costScr = eng ? 4 : 6; costEle = eng ? 3 : 4; }
+
+        if(state.ap < 1 || state.scr < costScr || state.ele < costEle) return;
+        lockUI(true); state.ap--; state.scr -= costScr; state.ele -= costEle; updateUI();
+
+        sfx.play('click');
+        await logMsg(`Initiating hardware construction...`, "var(--text)");
+        await sleep(1000);
+
+        state.sys[sys]++;
+        sfx.play('success');
+        await logMsg(`SYSTEM ONLINE: ${sys.toUpperCase()}.`, "var(--success)");
+        updateUI(); lockUI(false);
+    }
+
+    function actionTravelMenu() {
+        if (inputLocked) return;
+        const list = document.getElementById('action-list');
+        list.innerHTML = `<h3>NAV_TARGETS</h3>`;
+        for(let key in LOCATIONS) {
+            if(key === 'Base') continue;
+            if(key === 'Pod' && state.podDismantled) continue;
+            let tCost = state.job === 'SCOUT' ? 1 : 2;
+            list.innerHTML += `<button onclick="actionTravel('${key}')">${LOCATIONS[key].name} <span class="cost">${tCost} AP</span></button>`;
+        }
+        list.innerHTML += `<button onclick="renderActions()">[ CANCEL ]</button>`;
+    }
+
+    async function actionTravel(dest) {
+        let tCost = state.job === 'SCOUT' ? 1 : 2;
+        if(state.ap < tCost || inputLocked) return;
+        lockUI(true); state.ap -= tCost; updateUI();
+
+        sfx.play('click');
+        await logMsg(`Plotting coordinates for ${LOCATIONS[dest].name}...`, "var(--text)");
+        await logMsg("Routing around known hazard zones.", "var(--aura)", true);
+        await sleep(800);
+        
+        if(state.weather === 'RADIATION') {
+            state.hp -= 1;
+            sfx.play('error');
+            await logMsg("RADIATION SPIKE DURING TRANSIT! Took 1 DMG.", "var(--danger)");
+            if(state.hp <= 0) { checkFailure(); return; }
+        }
+
+        if(dest !== 'Base' && !state.traits.includes('PARANOID') && Math.random() > 0.6) {
+            sfx.play('error');
+            await logMsg("WARNING: HOSTILE INTERCEPT.", "var(--warn)");
+            await sleep(800);
+            initCombat(dest);
+            return;
+        }
+
+        resolveTravel(dest);
+    }
+
+    async function resolveTravel(dest) {
+        state.loc = dest;
+        if(dest === 'Base') { state.px = 2; state.py = 2; }
+        document.getElementById('loc-name').innerText = LOCATIONS[dest].name;
+        document.getElementById('loc-name').style.color = LOCATIONS[dest].color;
+        sfx.play('success');
+        await logMsg(`Arrived at ${LOCATIONS[dest].name}.`, "var(--success)");
+        drawMapSVG();
+        updateUI(); lockUI(false);
+    }
+
+    async function initCombat(pendingDest) {
+        sfx.setDroneFreq(120); sfx.play('combat');
+        state.combat.active = true;
+        
+        let r = Math.random();
+        if(r < 0.4) { state.combat.type = 'SCOUT DRONE'; state.combat.enemyHp = 50; }
+        else if(r < 0.8) { state.combat.type = 'BIO-MUTANT'; state.combat.enemyHp = 80; }
+        else { state.combat.type = 'DEFENSE MECH'; state.combat.enemyHp = 150; }
+        
+        state.combat.dest = pendingDest;
+        
+        if(state.sys.turret > 0 && state.loc === 'Base') {
+            state.combat.enemyHp -= 50;
+            await logMsg("AUTO-TURRET FIRED! Enemy took massive damage.", "var(--success)");
+        }
+        
+        document.getElementById('combat-type').innerText = state.combat.type;
+        document.getElementById('combat-hp').innerText = state.combat.enemyHp;
+        document.getElementById('aura-combat-text').innerText = `"Evasive maneuvers recommended! That ${state.combat.type} looks angry."`;
+        
+        let cBtns = document.getElementById('combat-buttons-container');
+        cBtns.innerHTML = `
+            <button class="btn-danger" onclick="executeCombat('quick')" style="width: 200px; justify-content:center;">[ QUICK STRIKE ]</button>
+            <button class="btn-danger" onclick="executeCombat('heavy')" style="width: 200px; justify-content:center;">[ HEAVY STRIKE (70%) ]</button>
+            <button class="btn-danger" onclick="executeCombat('plasma')" style="width: 200px; justify-content:center; ${state.bat < 1 ? 'opacity:0.3; pointer-events:none;':''}">[ PLASMA BLAST (1 PWR) ]</button>
+            <button onclick="executeCombat('evade')" style="width: 200px; justify-content:center;">[ EVADE ]</button>
+        `;
+
+        document.getElementById('overlay-combat').classList.remove('hidden');
+        lockUI(false); 
+    }
+
+    async function executeCombat(action) {
+        if(inputLocked) return;
+        lockUI(true);
+        
+        let hit = true; let dmg = 0;
+        
+        if(action === 'quick') {
+            dmg = state.job === 'SOLDIER' ? 25 : 15;
+            sfx.play('combat');
+        } else if (action === 'heavy') {
+            hit = Math.random() > 0.3;
+            dmg = state.job === 'SOLDIER' ? 45 : 30;
+            sfx.play('combat');
+        } else if (action === 'plasma') {
+            if(state.bat < 1) { lockUI(false); return; }
+            state.bat--; hit = true; dmg = 80;
+            sfx.play('scan');
+        } else if (action === 'evade') {
+            sfx.play('click');
+        }
+
+        if(action !== 'evade') {
+            document.getElementById('svg-drone').classList.add('shake');
+            setTimeout(() => document.getElementById('svg-drone').classList.remove('shake'), 300);
+            
+            if(hit) {
+                state.combat.enemyHp -= dmg;
+                await logMsg(`STRIKE LANDED. Dealt ${dmg} DMG.`, "var(--text)");
+            } else {
+                await logMsg(`STRIKE MISSED.`, "var(--warn)");
+            }
+            
+            document.getElementById('combat-hp').innerText = Math.max(0, state.combat.enemyHp);
+            await sleep(800);
+            
+            if(state.combat.enemyHp <= 0) {
+                sfx.play('success');
+                await logMsg(`THREAT NEUTRALIZED.`, "var(--success)");
+                endCombat(true);
+                return;
+            }
+        } else {
+            await logMsg(`EVASIVE MANEUVERS ENGAGED.`, "var(--text)");
+            await sleep(800);
+        }
+
+        sfx.play('error');
+        document.getElementById('main-viewscreen').classList.add('shake');
+        setTimeout(() => document.getElementById('main-viewscreen').classList.remove('shake'), 300);
+        
+        let eDmg = 0;
+        if(state.combat.type === 'SCOUT DRONE') eDmg = 1;
+        if(state.combat.type === 'BIO-MUTANT') eDmg = 2;
+        if(state.combat.type === 'DEFENSE MECH') eDmg = 3;
+        
+        if(action === 'evade') { eDmg = Math.floor(eDmg / 2); }
+        
+        if(eDmg > 0) {
+            state.hp -= eDmg;
+            await logMsg(`ENEMY STRIKES! TOOK ${eDmg} DMG.`, "var(--danger)");
+            updateUI();
+        } else {
+            await logMsg(`EVADED ENEMY ATTACK.`, "var(--success)");
+        }
+
+        if(state.hp <= 0) {
+            checkFailure();
+        } else {
+            lockUI(false);
+        }
+    }
+
+    function endCombat(won) {
+        document.getElementById('overlay-combat').classList.add('hidden');
+        sfx.setDroneFreq(55);
+        state.combat.active = false;
+        if(won && state.combat.dest) resolveTravel(state.combat.dest);
+        else { lockUI(false); updateUI(); }
+    }
+
+    function initHack() {
+        sfx.setDroneFreq(200);
+        state.hack.active = true;
+        state.hack.tries = 3;
+        state.hack.found = 0;
+        document.getElementById('hack-tries').innerText = state.hack.tries;
+        
+        let arr = []; while(arr.length < 3) { let r = Math.floor(Math.random()*16); if(arr.indexOf(r) === -1) arr.push(r); }
+        state.hack.targetKeys = arr;
+
+        const grid = document.getElementById('hack-grid');
+        grid.innerHTML = '';
+        for(let i=0; i<16; i++) {
+            let n = document.createElement('div');
+            n.className = 'hack-node'; n.innerText = Math.floor(Math.random()*99);
+            n.onclick = () => processHackNode(n, i);
+            grid.appendChild(n);
+        }
+        
+        document.getElementById('overlay-hack').classList.remove('hidden');
+        lockUI(false);
+    }
+
+    async function processHackNode(node, index) {
+        if(node.classList.contains('solved') || node.classList.contains('failed') || inputLocked) return;
+        lockUI(true);
+
+        if(state.hack.targetKeys.includes(index)) {
+            sfx.play('click');
+            node.classList.add('solved');
+            state.hack.found++;
+            if(state.hack.found >= 3) {
+                sfx.play('success');
+                await logMsg("ENCRYPTION BROKEN. +3 ELEC, +5 SCRAP.", "var(--success)");
+                await logMsg("We did it! You're quite the slicer, Commander.", "var(--aura)", true);
+                state.ele += 3; state.scr += 5; updateUI();
+                abortHack();
+                return;
+            }
+        } else {
+            sfx.play('error');
+            node.classList.add('failed');
+            state.hack.tries--;
+            document.getElementById('hack-tries').innerText = state.hack.tries;
+            if(state.hack.tries <= 0) {
+                await logMsg("SECURITY LOCKOUT. ACCESS DENIED.", "var(--danger)");
+                await logMsg("Darn it. They changed their encryption keys.", "var(--aura)", true);
+                abortHack();
+                return;
+            }
+        }
+        lockUI(false);
+    }
+
+    function abortHack() {
+        document.getElementById('overlay-hack').classList.add('hidden');
+        sfx.setDroneFreq(55);
+        state.hack.active = false;
+        lockUI(false); updateUI();
+    }
+
+    function drawMapSVG() {
+        const svg = document.getElementById('svg-view');
+        const col = LOCATIONS[state.loc].color;
+        
+        let html = '';
+
+        if(state.loc === 'Base') {
+            for(let y=0; y<5; y++) {
+                for(let x=0; x<5; x++) {
+                    let cx = 400 + (x-2)*65;
+                    let cy = 200 + (y-2)*65;
+                    let cell = GRID_LAYOUT[`${x},${y}`];
+                    let strokeCol = 'var(--border)';
+                    let fillCol = 'none';
+                    let txt = '';
+                    
+                    if(cell) {
+                        if(cell.id === 'hub') {
+                            strokeCol = cell.col;
+                            txt = 'HUB';
+                        } else if(state.sys[cell.req] > 0) {
+                            strokeCol = cell.col;
+                            fillCol = 'rgba(0,240,255,0.05)';
+                            txt = cell.id.substring(0,3).toUpperCase();
+                        }
+                    }
+
+                    if(x === state.px && y === state.py) {
+                        strokeCol = 'var(--text)';
+                        fillCol = 'rgba(255,255,255,0.2)';
+                    }
+
+                    html += `<rect x="${cx-30}" y="${cy-30}" width="60" height="60" fill="${fillCol}" stroke="${strokeCol}" stroke-width="2" class="map-tile" onclick="movePlayer(${x},${y})"/>`;
+                    if(txt) html += `<text x="${cx}" y="${cy+5}" fill="${strokeCol}" text-anchor="middle" font-size="10" pointer-events="none">${txt}</text>`;
+                }
+            }
+            html += `<circle cx="${400 + (state.px-2)*65}" cy="${200 + (state.py-2)*65}" r="5" fill="var(--text)" pointer-events="none"/>`;
+        } else {
+            html += `
+                <line x1="0" y1="200" x2="800" y2="200" stroke="var(--border)" stroke-width="1"/>
+                <line x1="400" y1="0" x2="400" y2="400" stroke="var(--border)" stroke-width="1"/>
+                <circle cx="400" cy="200" r="100" fill="none" stroke="var(--border)" stroke-width="1" opacity="0.5"/>
+                <circle cx="400" cy="200" r="200" fill="none" stroke="var(--border)" stroke-width="1" opacity="0.5"/>
+                <rect x="360" y="160" width="80" height="80" fill="none" stroke="${col}" stroke-width="2" stroke-dasharray="10,5">
+                    <animateTransform attributeName="transform" type="rotate" from="0 400 200" to="360 400 200" dur="10s" repeatCount="indefinite"/>
+                </rect>
+                <circle cx="400" cy="200" r="5" fill="${col}"/>
+                <text x="400" y="150" fill="${col}" text-anchor="middle" font-size="12">EXTERIOR ZONE</text>
+            `;
+        }
+        svg.innerHTML = html;
+    }
+
+    function saveGame() {
+        localStorage.setItem('lunarTitanV12', JSON.stringify(state));
+    }
+</script>
+</body>
+</html>
