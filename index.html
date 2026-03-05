@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUNAR: SURVIVAL PROTOCOL</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="screen-boot" class="screen">
+    <div id="boot-text" style="width: 800px; white-space: pre-wrap; line-height: 1.5; font-size: 1.2rem; color: var(--success);"></div>
+</div>
+
+<div id="screen-setup" class="screen hidden">
+    <h1 style="font-size: 3rem; color: var(--primary); letter-spacing: 10px; margin-bottom: 5px; text-shadow: 0 0 20px var(--primary);">LUNAR_OS_TITAN</h1>
+    <p style="color: var(--secondary); margin-bottom: 40px;">INITIALIZE PERSONNEL PROFILE</p>
+    <div class="setup-grid">
+        <div class="setup-box" id="job-select">
+            <h3 style="color:var(--text)">OCCUPATION</h3>
+            <button onclick="selectJob('ENGINEER', this)">[ENG] ENGINEER <span class="cost">Build Bonus</span></button>
+            <button onclick="selectJob('SCOUT', this)">[SCT] SCOUT <span class="cost">Travel Cost -1</span></button>
+            <button onclick="selectJob('SOLDIER', this)">[SLD] SOLDIER <span class="cost">Combat DMG +20</span></button>
+            <button onclick="selectJob('MINER', this)">[MNR] MINER <span class="cost">Scrap Yield Bonus</span></button>
+            <button onclick="selectJob('BOTANIST', this)">[BOT] BOTANIST <span class="cost">Garden Yield +5</span></button>
+            <button onclick="selectJob('HACKER', this)">[HCX] HACKER <span class="cost">Bypass Locks</span></button>
+            <button onclick="selectJob('MEDIC', this)">[MED] MEDIC <span class="cost">MedBay Bonus</span></button>
+        </div>
+        <div class="setup-box" id="trait-select">
+            <h3 style="color:var(--text)">GENETIC TRAIT</h3>
+            <button onclick="toggleTrait('STRONG', this)">STRONG <span class="cost">+2 HP, Eats More</span></button>
+            <button onclick="toggleTrait('FRAIL', this)">FRAIL <span class="cost">-2 HP, +1 AP</span></button>
+            <button onclick="toggleTrait('GENIUS', this)">GENIUS <span class="cost">Double Research</span></button>
+            <button onclick="toggleTrait('HOARDER', this)">HOARDER <span class="cost">Start +10 Scrap</span></button>
+            <button onclick="toggleTrait('OPTIMIST', this)">OPTIMIST <span class="cost">Free AP Chance</span></button>
+            <button onclick="toggleTrait('EFFICIENT', this)">EFFICIENT <span class="cost">Lower Vitals Tax</span></button>
+            <button onclick="toggleTrait('PARANOID', this)">PARANOID <span class="cost">Evade Combat</span></button>
+        </div>
+    </div>
+    <button onclick="triggerCinematicIntro()" style="width: 400px; justify-content: center; font-size: 1.2rem; padding: 15px; border-color: var(--primary); color: var(--primary);">[ INITIATE NEURAL LINK ]</button>
+</div>
+
+<div id="screen-intro" class="screen hidden">
+    <h2 class="overlay-text" style="color: var(--danger)">CRITICAL EMERGENCY DETECTED</h2>
+    <div id="intro-log" style="width: 600px; height: 350px; font-size: 1.2rem; color: var(--warn); display: flex; flex-direction: column; gap: 15px;"></div>
+    <button id="intro-btn" class="hidden" onclick="bootSystem()" style="margin-top: 30px; font-size: 1.2rem; border-color: var(--danger); color: var(--danger); width: 400px; justify-content: center;">[ INITIALIZE A.U.R.A. ]</button>
+</div>
+
+<div id="screen-shutdown" class="screen hidden" style="background: #000; z-index: 400;">
+    <div id="shutdown-text" style="font-size: 2rem; color: var(--primary); letter-spacing: 5px; text-align: center; line-height: 2;"></div>
+</div>
+
+<div id="screen-metabolism" class="screen hidden">
+    <h2 class="overlay-text" style="color: var(--warn)">CYCLE START: METABOLISM</h2>
+    <p id="aura-morning-text" style="margin-bottom: 30px; color: var(--aura); font-style: italic;"></p>
+    <div style="display: flex; gap: 20px; width: 600px;">
+        <div onclick="processMetabolism(2, 2)" style="flex:1; display:flex; flex-direction:column; align-items:center; padding: 20px; border: 1px solid var(--border); cursor: pointer; background: rgba(0, 240, 255, 0.05);">
+            <span style="font-size: 1.2rem; color:var(--text);">STANDARD RATIONS</span>
+            <span style="color:var(--warn); margin-top:10px;">Cost: 2 Food | Yield: 2 AP</span>
+        </div>
+        <div onclick="processMetabolism(4, 4)" style="flex:1; display:flex; flex-direction:column; align-items:center; padding: 20px; border: 1px solid var(--border); cursor: pointer; background: rgba(0, 240, 255, 0.05);">
+            <span style="font-size: 1.2rem; color:var(--primary);">FULL MEAL</span>
+            <span style="color:var(--warn); margin-top:10px;">Cost: 4 Food | Yield: 4 AP</span>
+        </div>
+    </div>
+    <div id="metab-warning" style="color: var(--danger); margin-top: 20px; font-weight: bold; height: 20px;"></div>
+    <button onclick="restartGame()" style="margin-top: 50px; border-color: var(--danger); color: var(--danger); width: 300px; justify-content: center;">[ ABORT MISSION (WIPE SAVE) ]</button>
+</div>
+
+<div id="screen-hud" class="hud-container hidden">
+    <div class="panel" style="grid-column: 1 / 4; flex-direction: row; justify-content: space-between; align-items: center; padding: 10px 20px;">
+        <div style="font-weight: bold; color: var(--secondary);">LUNAR_OS <span style="color:var(--text);">v12.0</span> | AURA ACTIVE</div>
+        <div id="hud-day" style="font-size: 1.5rem; color: var(--warn); font-weight: bold; letter-spacing: 2px;"></div>
+        <div id="hud-profile" style="color: var(--primary); font-size: 0.9rem;"></div>
+    </div>
+    <div class="panel" style="overflow-y: auto;">
+        <h3>BIOMETRICS</h3>
+        <div id="hud-vitals"></div>
+        <hr style="border:0; border-top:1px solid var(--border); margin: 15px 0;">
+        <h3>INVENTORY</h3>
+        <div id="hud-inv"></div>
+        <hr style="border:0; border-top:1px solid var(--border); margin: 15px 0;">
+        <h3>SYSTEMS</h3>
+        <div id="hud-sys"></div>
+    </div>
+    <div class="panel viewscreen" id="main-viewscreen">
+        <div id="view-overlay">
+            <span id="loc-name" style="font-size: 1.2rem; color: var(--primary); margin-bottom: 5px;"></span>
+            <span id="loc-weather" style="color: var(--danger); font-weight: bold; margin-bottom: 5px;"></span>
+            <span id="loc-status"></span>
+        </div>
+        <svg id="svg-view" width="100%" height="100%" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid slice"></svg>
+        <div id="overlay-combat" class="minigame-overlay hidden">
+            <h2 class="overlay-text" style="color: var(--danger)">HOSTILE INTERCEPT</h2>
+            <p id="aura-combat-text" style="color: var(--aura); font-style: italic; margin-bottom: 20px;"></p>
+            <svg id="svg-drone" width="200" height="200" viewBox="0 0 100 100" style="margin-bottom: 20px;">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="var(--danger)" stroke-width="4"/>
+                <circle cx="50" cy="50" r="10" fill="var(--danger)">
+                    <animate attributeName="r" values="8;12;8" dur="1s" repeatCount="indefinite" />
+                </circle>
+            </svg>
+            <div style="font-size: 1.5rem; color: var(--warn); margin-bottom: 20px;"><span id="combat-type"></span> INTEGRITY: <span id="combat-hp"></span></div>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; width: 420px; justify-content: center;" id="combat-buttons-container"></div>
+        </div>
+        <div id="overlay-hack" class="minigame-overlay hidden">
+            <h2 class="overlay-text" style="color: var(--primary)">DECRYPTOR PROTOCOL</h2>
+            <p id="aura-hack-text" style="color: var(--aura); font-style: italic;"></p>
+            <p>Attempts remaining: <span id="hack-tries" style="color:var(--warn); font-weight:bold; font-size:1.2rem;"></span></p>
+            <div id="hack-grid"></div>
+            <button onclick="abortHack()" id="btn-abort-hack" style="margin-top: 30px; border-color: var(--danger); color: var(--danger);">[ ABORT HACK ]</button>
+        </div>
+    </div>
+    <div class="panel">
+        <h3>COMMAND_LINE</h3>
+        <div style="text-align: center; margin-bottom: 15px; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid var(--border);">
+            <span style="font-size: 0.8rem; color: var(--text);">AP_AVAILABLE</span><br>
+            <span id="hud-ap" style="font-size: 2.5rem; color: var(--success); font-weight: bold; text-shadow: 0 0 10px var(--success);"></span>
+        </div>
+        <div id="action-list" style="display: flex; flex-direction: column; overflow-y: auto; flex-grow:1;"></div>
+    </div>
+    <div class="panel" style="grid-column: 1 / 4;">
+        <h3>SYSTEM_LOG</h3>
+        <div id="log-container"></div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
